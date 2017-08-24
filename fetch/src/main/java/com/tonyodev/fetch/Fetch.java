@@ -83,6 +83,30 @@ public final class Fetch implements FetchConst {
     }
 
     /**
+     * Allows to clean all requests before attempting to process pending requests.
+     * This is important when device is restarted and application download files by
+     * intentional request and does not want to start downloading pending requests
+     * when device restarts. For example, SOTA apps.
+     *
+     * Remember that {@link Fetch#Fetch(Context)} will call {@link #startService(Context)}
+     * that is going to call {@link FetchService#startDownload()} i.e and will save into
+     * {@link FetchService#activeDownloads} all active downloads from database so if you
+     * call explicitly {@link #removeAll()} or {@link #removeRequests()} it will stop
+     * the downloads tasks using {@link FetchService#removeRequestAll()} method and
+     * {@link FetchRunnable#interrupted} variable and then your app probably
+     * will be not notified about this.
+     *
+     * Using this method, only the database is cleaned.
+     *
+     * Note: you could also call this method without initializing Fetch.
+     *
+     * @param context context used to start the service
+     */
+    public static void preCleanRequests(@NonNull Context context) {
+        FetchService.preCleanRequests(context);
+    }
+
+    /**
      * Starts the FetchService and begins processing/downloading any
      * Fetch.STATUS_QUEUED Requests in the background.
      *

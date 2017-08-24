@@ -29,6 +29,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 
 import com.tonyodev.fetch.exception.EnqueueException;
+import com.tonyodev.fetch.request.Request;
 import com.tonyodev.fetch.request.RequestInfo;
 
 import java.io.File;
@@ -95,6 +96,7 @@ public final class FetchService extends Service implements FetchConst {
     public static final int ACTION_ON_UPDATE_INTERVAL = 323;
     public static final int ACTION_REMOVE_REQUEST = 324;
     public static final int ACTION_REMOVE_REQUEST_ALL = 325;
+    public static final int ACTION_REMOVE_REQUESTS_AND_FILES = 326;
 
 
     public static final int QUERY_SINGLE = 480;
@@ -141,6 +143,17 @@ public final class FetchService extends Service implements FetchConst {
 
         Intent intent = new Intent(context,FetchService.class);
         intent.putExtra(FetchService.ACTION_TYPE, FetchService.ACTION_PROCESS_PENDING);
+        context.startService(intent);
+    }
+
+    public static void preCleanRequests(@NonNull Context context) {
+
+        if(context == null) {
+            throw new NullPointerException("Context cannot be null");
+        }
+
+        Intent intent = new Intent(context,FetchService.class);
+        intent.putExtra(FetchService.ACTION_TYPE, FetchService.ACTION_REMOVE_REQUESTS_AND_FILES);
         context.startService(intent);
     }
 
@@ -322,6 +335,10 @@ public final class FetchService extends Service implements FetchConst {
                         }
                         case ACTION_REMOVE_REQUEST_ALL: {
                             removeRequestAll();
+                            break;
+                        }
+                        case ACTION_REMOVE_REQUESTS_AND_FILES: {
+                            removeRequestsAndFilesFromDatabase();
                             break;
                         }
                         default: {
@@ -664,10 +681,27 @@ public final class FetchService extends Service implements FetchConst {
         }
     }
 
+    private List<RequestInfo> getCurrentRequestsFromDatabase() {
+        Cursor cursor = databaseHelper.get();
+        return Utils.cursorToRequestInfoList(cursor,true,loggingEnabled);
+    }
+
+    private void removeRequestsAndFilesFromDatabase() {
+
+        List<RequestInfo> requests = getCurrentRequestsFromDatabase();
+
+        for (RequestInfo request : requests) {
+
+            Utils.deleteFile(request.getFilePath());
+
+        }
+
+        databaseHelper.deleteAll();
+    }
+
     private void removeRequestAllAction() {
 
-        Cursor cursor = databaseHelper.get();
-        List<RequestInfo> requests = Utils.cursorToRequestInfoList(cursor,true,loggingEnabled);
+        List<RequestInfo> requests = getCurrentRequestsFromDatabase();
 
         if(requests != null && databaseHelper.deleteAll()) {
 
